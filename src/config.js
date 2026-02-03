@@ -1,12 +1,13 @@
 // Tulis konfigurasi Firebase Anda di sini
 // Anda bisa mendapatkannya dari Firebase Console -> Project Settings
 export const firebaseConfig = {
-    apiKey: "GANTI_DENGAN_API_KEY_ANDA",
-    authDomain: "GANTI_DENGAN_AUTH_DOMAIN_ANDA",
-    projectId: "GANTI_DENGAN_PROJECT_ID_ANDA",
-    storageBucket: "GANTI_DENGAN_STORAGE_BUCKET_ANDA",
-    messagingSenderId: "GANTI_DENGAN_MESSAGING_SENDER_ID_ANDA",
-    appId: "GANTI_DENGAN_APP_ID_ANDA"
+    apiKey: "AIzaSyCpxhU4cCKs64uh0KaLDGOoIBbUPC0Agpg",
+    authDomain: "catatbelanja-e4fda.firebaseapp.com",
+    projectId: "catatbelanja-e4fda",
+    storageBucket: "catatbelanja-e4fda.firebasestorage.app",
+    messagingSenderId: "1610119403",
+    appId: "1:1610119403:web:c4b0e0bc84345e2ead66ae",
+    measurementId: "G-CSQ933SN6Q"
 };
 
 export const appId = 'expense-smart-v4';
