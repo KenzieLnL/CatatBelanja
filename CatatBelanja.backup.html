@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CatatBelanja - Harga Pintar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        .session-card:hover {
+            transform: translateY(-3px);
+            border-color: #3b82f6;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .price-up {
+            color: #ef4444;
+            border-color: #fca5a5 !important;
+            background-color: #fef2f2;
+        }
+
+        .price-down {
+            color: #10b981;
+            border-color: #6ee7b7 !important;
+            background-color: #f0fdf4;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen pb-24">
+
+    <div id="loadingScreen" class="loading-overlay">
+        <div class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-blue-600 font-bold">Sinkronisasi Harga...</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-6 shadow-lg sticky top-0 z-40">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold flex items-center gap-2">
+                    <i data-lucide="shopping-bag"></i> CatatBelanja
+                </h1>
+                <p id="userStatus" class="text-[10px] opacity-70">Smart Price Tracker Active</p>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] uppercase opacity-70">Total Pengeluaran <span id="labelMonth">Bulan Ini</span></p>
+                <p id="totalMonth" class="text-xl font-black">Rp 0</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 py-8 space-y-12">
+
+        <!-- SECTION 1: PEMBUATAN DRAF BELANJA -->
+        <section>
+            <div class="mb-4">
+                <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <i data-lucide="edit-3" class="text-blue-600"></i> Buat List Belanja Baru
+                </h2>
+                <p class="text-xs text-gray-500">Masukkan barang-barang lalu simpan sebagai kartu belanja</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Form Input -->
+                <div class="glass-card p-5 rounded-2xl shadow-sm h-fit">
+                    <form id="draftForm" class="space-y-4">
+                        <div>
+                            <label
+                                class="block text-[10px] font-bold text-gray-400 uppercase mb-1 text-blue-600">Tanggal
+                                Belanja</label>
+                            <input type="date" id="itemDate" required
+                                class="w-full px-4 py-2 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-2">
+
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1 text-blue-600">Nama
+                                Barang</label>
+                            <input type="text" id="itemName" placeholder="Contoh: Beras" required
+                                class="w-full px-4 py-2 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Jumlah</label>
+                                <input type="number" id="itemQty" value="1" step="any" required
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Satuan</label>
+                                <select id="itemUnit"
+                                    class="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm outline-none bg-gray-50">
+                                    <option value="Kg">Kg</option>
+                                    <option value="Liter">Ltr</option>
+                                    <option value="Pcs">Pcs</option>
+                                    <option value="Bks">Bks</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit"
+                            class="w-full bg-slate-800 hover:bg-black text-white font-bold py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all">
+                            <i data-lucide="plus" size="16"></i> Tambah ke Draf
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Preview Draf -->
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="bg-white border rounded-2xl p-4 min-h-[220px] flex flex-col shadow-sm">
+                        <div class="flex justify-between items-center mb-4 border-b pb-2">
+                            <span class="text-sm font-bold text-gray-700">Draf Item (<span
+                                    id="draftCount">0</span>)</span>
+                            <button id="btnSaveSession"
+                                class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-full font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                                Simpan Jadi Kartu Belanja
+                            </button>
+                        </div>
+                        <div id="draftContainer" class="space-y-2 flex-grow">
+                            <!-- Items in current draft -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: KARTU BELANJA (Kumpulan Sesi) -->
+        <section id="sessions-section">
+            <div class="mb-4">
+                <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <i data-lucide="layers" class="text-orange-500"></i> Kartu Belanja Tersimpan
+                </h2>
+                <p class="text-xs text-gray-500">Klik kartu untuk mengisi harga dan cek perbandingan harga</p>
+            </div>
+            <div id="sessionContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Session cards -->
+            </div>
+        </section>
+
+        <!-- SECTION 3: JENDELA DETAIL BELANJA -->
+        <section id="detail-section" class="hidden scroll-mt-24">
+            <div class="bg-white border-2 border-blue-100 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-2 bg-blue-500"></div>
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <button onclick="window.closeDetail()"
+                            class="text-blue-600 text-xs font-bold flex items-center gap-1 mb-2 hover:underline">
+                            <i data-lucide="arrow-left" size="14"></i> Kembali ke Kartu
+                        </button>
+                        <h2 id="detailTitle" class="text-xl font-black text-gray-800">Detail Belanja</h2>
+                        <p id="detailDate" class="text-xs text-gray-400 font-medium"></p>
+                    </div>
+                    <div class="text-right bg-blue-50 px-4 py-2 rounded-2xl">
+                        <p class="text-[9px] font-black text-blue-400 uppercase tracking-tighter">Total Estimasi</p>
+                        <p id="detailTotalLive" class="text-lg font-black text-blue-700">Rp 0</p>
+                    </div>
+                </div>
+
+                <div id="detailItemsContainer" class="space-y-4 mb-8">
+                    <!-- Detail rows -->
+                </div>
+
+                <div class="flex justify-end border-t pt-6 gap-3">
+                    <button onclick="window.closeDetail()"
+                        class="px-6 py-3 rounded-2xl font-bold text-gray-400 hover:text-gray-600 transition-colors">BATAL</button>
+                    <button onclick="window.finishSession()"
+                        class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-2xl font-black shadow-lg flex items-center gap-3 transition-all">
+                        <i data-lucide="check-circle" size="20"></i> SELESAIKAN BELANJA
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: RIWAYAT -->
+        <section>
+            <div class="flex items-center justify-between mb-4 border-b pb-2">
+                <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <i data-lucide="history" class="text-slate-400"></i> Riwayat Pembelian
+                </h2>
+                <div class="flex gap-2">
+                    <select id="filterMonth"
+                        class="text-xs border rounded-lg p-2 bg-white outline-none focus:ring-2 focus:ring-blue-500"></select>
+                    <select id="filterYear"
+                        class="text-xs border rounded-lg p-2 bg-white outline-none focus:ring-2 focus:ring-blue-500"></select>
+                </div>
+            </div>
+            <div id="historyContainer" class="space-y-2"></div>
+        </section>
+
+    </main>
+
+    <!-- Toast -->
+    <div id="toast"
+        class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl transform translate-y-32 transition-transform duration-300 flex items-center gap-3 z-50 text-sm font-medium">
+        <span id="toastMsg">Berhasil!</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, deleteDoc, onSnapshot, addDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'expense-smart-v4';
+
+        let user = null;
+        let draftItems = [];
+        let sessions = [];
+        let historyData = [];
+        let activeSessionId = null;
+        let temporaryPrices = {};
+
+        const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        const now = new Date();
+
+        // Init Filter & Date Input
+        const filterMonth = document.getElementById('filterMonth');
+        const filterYear = document.getElementById('filterYear');
+        const itemDateInput = document.getElementById('itemDate');
+
+        // Set default date input ke hari ini (format YYYY-MM-DD)
+        itemDateInput.value = now.toISOString().split('T')[0];
+
+        monthNames.forEach((m, i) => {
+            const opt = document.createElement('option'); opt.value = i; opt.text = m;
+            if (i === now.getMonth()) opt.selected = true;
+            filterMonth.appendChild(opt);
+        });
+
+        for (let i = now.getFullYear() - 1; i <= now.getFullYear() + 1; i++) {
+            const opt = document.createElement('option'); opt.value = i; opt.text = i;
+            if (i === now.getFullYear()) opt.selected = true;
+            filterYear.appendChild(opt);
+        }
+
+        const formatIDR = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
+
+        const showToast = (msg) => {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('translate-y-32');
+            setTimeout(() => toast.classList.add('translate-y-32'), 2500);
+        };
+
+        onAuthStateChanged(auth, async (u) => {
+            user = u;
+            if (user) {
+                document.getElementById('loadingScreen').classList.add('hidden');
+                setupListeners();
+            } else {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            }
+        });
+
+        function setupListeners() {
+            onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'sessions'), (snap) => {
+                sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderSessions();
+                if (activeSessionId) renderDetail();
+            }, (err) => console.error(err));
+
+            onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'history'), (snap) => {
+                historyData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderAllHistoryUI();
+            }, (err) => console.error(err));
+        }
+
+        function renderAllHistoryUI() {
+            renderTotals();
+            renderHistory();
+        }
+
+        function getLastPrice(name) {
+            const matches = historyData
+                .filter(h => h.name.toLowerCase() === name.toLowerCase())
+                .sort((a, b) => b.timestamp - a.timestamp);
+            return matches.length > 0 ? matches[0].price : null;
+        }
+
+        // --- DRAF LOGIC ---
+        document.getElementById('draftForm').onsubmit = (e) => {
+            e.preventDefault();
+            const name = document.getElementById('itemName').value;
+            const dateValue = document.getElementById('itemDate').value; // Ambil tanggal dari input
+
+            const item = {
+                id: Date.now().toString(),
+                name: name,
+                qty: document.getElementById('itemQty').value,
+                unit: document.getElementById('itemUnit').value,
+                lastPrice: getLastPrice(name),
+                selectedDate: dateValue // Simpan tanggal di level item draf
+            };
+            draftItems.push(item);
+
+            // Reset nama saja, biar tanggal tetap kalau mau input banyak item di tanggal yang sama
+            document.getElementById('itemName').value = "";
+            renderDraft();
+        };
+
+        function renderDraft() {
+            const container = document.getElementById('draftContainer');
+            const countEl = document.getElementById('draftCount');
+            const saveBtn = document.getElementById('btnSaveSession');
+
+            countEl.innerText = draftItems.length;
+            saveBtn.disabled = draftItems.length === 0;
+
+            if (draftItems.length === 0) {
+                container.innerHTML = `<div class="flex-grow flex items-center justify-center text-gray-300 text-xs italic">Belum ada item ditambahkan</div>`;
+                return;
+            }
+
+            container.innerHTML = draftItems.map((item, idx) => `
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100 group">
+                    <div class="flex items-center gap-2">
+                         <div class="w-6 h-6 bg-white rounded-full flex items-center justify-center text-[10px] font-bold text-blue-500">${idx + 1}</div>
+                         <div>
+                            <span class="text-sm font-bold text-gray-700">${item.name}</span>
+                            <span class="text-[10px] text-gray-400 block">${item.qty} ${item.unit} • Untuk: ${item.selectedDate}</span>
+                         </div>
+                    </div>
+                    <button onclick="window.removeFromDraft(${idx})" class="text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="minus-circle" size="18"></i></button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        window.removeFromDraft = (idx) => {
+            draftItems.splice(idx, 1);
+            renderDraft();
+        };
+
+        document.getElementById('btnSaveSession').onclick = async () => {
+            if (draftItems.length === 0) return;
+
+            // Ambil tanggal dari item pertama di draf sebagai referensi sesi
+            const refDate = new Date(draftItems[0].selectedDate);
+            const dateStr = refDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+            const sessionData = {
+                items: draftItems,
+                createdAt: refDate.getTime(), // Gunakan waktu dari tanggal yang dipilih
+                dateStr: dateStr,
+                isoDate: draftItems[0].selectedDate,
+                status: 'pending'
+            };
+
+            await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'sessions'), sessionData);
+            draftItems = [];
+            renderDraft();
+            showToast("Kartu Belanja Baru Tersimpan!");
+        };
+
+        // --- SESSIONS RENDER ---
+        function renderSessions() {
+            const container = document.getElementById('sessionContainer');
+            if (sessions.length === 0) {
+                container.innerHTML = `<div class="col-span-full py-10 text-center text-gray-400 text-sm border-2 border-dashed rounded-3xl">Belum ada kartu belanja tersimpan.</div>`;
+                return;
+            }
+            container.innerHTML = sessions.map(s => `
+                <div class="glass-card session-card p-5 rounded-3xl cursor-pointer relative overflow-hidden" onclick="window.openDetail('${s.id}')">
+                    <div class="absolute top-0 right-0 p-4">
+                         <button onclick="event.stopPropagation(); window.deleteSession('${s.id}')" class="text-gray-300 hover:text-red-500 transition-colors"><i data-lucide="trash-2" size="14"></i></button>
+                    </div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center">
+                            <i data-lucide="shopping-cart" size="20"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sesi Belanja</p>
+                            <p class="text-sm font-black text-gray-800">${s.dateStr}</p>
+                        </div>
+                    </div>
+                    <div class="space-y-1 mb-4">
+                        ${s.items.slice(0, 3).map(i => `<p class="text-[11px] text-gray-500 flex justify-between"><span>• ${i.name}</span> <span class="text-gray-400 font-medium">${i.qty} ${i.unit}</span></p>`).join('')}
+                        ${s.items.length > 3 ? `<p class="text-[10px] text-blue-500 font-bold mt-1">+ ${s.items.length - 3} item lainnya</p>` : ''}
+                    </div>
+                    <div class="pt-4 border-t flex justify-between items-center">
+                        <span class="text-[10px] bg-blue-100 text-blue-600 px-3 py-1 rounded-full font-bold uppercase">${s.items.length} Barang</span>
+                        <span class="text-xs text-blue-600 font-bold flex items-center gap-1">Input Harga <i data-lucide="arrow-right" size="14"></i></span>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // --- DETAIL ACTIONS ---
+        window.openDetail = (id) => {
+            activeSessionId = id;
+            temporaryPrices = {};
+            document.getElementById('sessions-section').classList.add('hidden');
+            document.getElementById('detail-section').classList.remove('hidden');
+            document.getElementById('detail-section').scrollIntoView({ behavior: 'smooth' });
+            renderDetail();
+        };
+
+        window.closeDetail = () => {
+            activeSessionId = null;
+            document.getElementById('sessions-section').classList.remove('hidden');
+            document.getElementById('detail-section').classList.add('hidden');
+            document.body.scrollIntoView({ behavior: 'smooth' });
+        };
+
+        function renderDetail() {
+            const session = sessions.find(s => s.id === activeSessionId);
+            if (!session) { window.closeDetail(); return; }
+
+            document.getElementById('detailTitle').innerText = `Input Harga ${session.dateStr}`;
+            document.getElementById('detailDate').innerText = `Pastikan harga sesuai struk belanja`;
+            updateLiveTotal();
+
+            const container = document.getElementById('detailItemsContainer');
+            container.innerHTML = session.items.map(item => {
+                const lastPrice = getLastPrice(item.name);
+                return `
+                <div id="row-${item.id}" class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-100 transition-all duration-300">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-400 shadow-sm border border-slate-100">
+                            <i data-lucide="tag" size="18"></i>
+                        </div>
+                        <div>
+                            <p class="font-black text-gray-800 text-sm leading-none mb-1">${item.name}</p>
+                            <p class="text-[11px] text-gray-400 font-medium">${item.qty} ${item.unit}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col items-end gap-1">
+                        <div class="relative flex items-center">
+                            <span class="absolute left-3 text-[10px] font-black text-gray-300">Rp</span>
+                            <input type="text" inputmode="numeric" placeholder="0" 
+                                oninput="window.handlePriceDetail('${item.id}', this.value, ${lastPrice || 0})"
+                                class="price-input bg-white border-2 border-transparent focus:ring-2 focus:ring-blue-100 outline-none pl-9 pr-4 py-3 rounded-2xl text-sm font-black w-40 shadow-sm transition-all">
+                        </div>
+                        ${lastPrice ? `
+                            <p class="text-[9px] font-bold text-gray-400 flex items-center gap-1">
+                                <i data-lucide="info" size="10"></i> Harga Terakhir: ${formatIDR(lastPrice)}
+                            </p>
+                        ` : '<p class="text-[9px] font-bold text-blue-400 italic">Belum ada data harga</p>'}
+                    </div>
+                </div>
+            `}).join('');
+            lucide.createIcons();
+        }
+
+        window.handlePriceDetail = (itemId, val, lastPrice) => {
+            const raw = val.replace(/\D/g, "");
+            const currentPrice = parseInt(raw) || 0;
+            temporaryPrices[itemId] = currentPrice;
+
+            const input = event.target;
+            const container = document.getElementById(`row-${itemId}`);
+
+            input.value = raw.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+            if (currentPrice === 0) {
+                input.className = "price-input bg-white border-2 border-transparent focus:ring-2 focus:ring-blue-100 outline-none pl-9 pr-4 py-3 rounded-2xl text-sm font-black w-40 shadow-sm transition-all";
+                container.classList.remove('price-up', 'price-down');
+            } else if (lastPrice > 0) {
+                if (currentPrice > lastPrice) {
+                    input.className = "price-input bg-white border-2 border-red-500 text-red-600 outline-none pl-9 pr-4 py-3 rounded-2xl text-sm font-black w-40 shadow-sm transition-all";
+                    container.classList.add('price-up');
+                    container.classList.remove('price-down');
+                } else {
+                    input.className = "price-input bg-white border-2 border-green-500 text-green-600 outline-none pl-9 pr-4 py-3 rounded-2xl text-sm font-black w-40 shadow-sm transition-all";
+                    container.classList.add('price-down');
+                    container.classList.remove('price-up');
+                }
+            }
+            updateLiveTotal();
+        };
+
+        function updateLiveTotal() {
+            const total = Object.values(temporaryPrices).reduce((a, b) => a + b, 0);
+            document.getElementById('detailTotalLive').innerText = formatIDR(total);
+        }
+
+        window.finishSession = async () => {
+            const session = sessions.find(s => s.id === activeSessionId);
+            if (!session) return;
+
+            const batch = writeBatch(db);
+            const historyRef = collection(db, 'artifacts', appId, 'users', user.uid, 'history');
+
+            // Konversi ISO date kembali ke timestamp untuk filter riwayat yang akurat
+            const finalTimestamp = new Date(session.isoDate || session.createdAt).getTime();
+
+            session.items.forEach(item => {
+                const price = temporaryPrices[item.id] || 0;
+                const newDoc = doc(historyRef);
+                batch.set(newDoc, {
+                    ...item,
+                    price: price,
+                    sessionDate: session.dateStr,
+                    timestamp: finalTimestamp // Riwayat menggunakan tanggal yang diinput di draf
+                });
+            });
+
+            batch.delete(doc(db, 'artifacts', appId, 'users', user.uid, 'sessions', activeSessionId));
+
+            await batch.commit();
+            showToast(`Belanja Berhasil Dicatat!`);
+            window.closeDetail();
+        };
+
+        // --- HISTORY & TOTALS ---
+        function renderHistory() {
+            const m = parseInt(filterMonth.value);
+            const y = parseInt(filterYear.value);
+
+            const filtered = historyData.filter(i => {
+                const d = new Date(i.timestamp);
+                return d.getMonth() === m && d.getFullYear() === y;
+            }).sort((a, b) => b.timestamp - a.timestamp);
+
+            const container = document.getElementById('historyContainer');
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 bg-white rounded-3xl border border-dashed text-gray-400 text-xs italic">Belum ada riwayat belanja untuk ${monthNames[m]} ${y}.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(item => `
+                <div class="bg-white p-4 rounded-2xl border border-gray-100 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300"><i data-lucide="check" size="14"></i></div>
+                        <div>
+                            <p class="text-xs font-black text-gray-800 leading-none">${item.name}</p>
+                            <p class="text-[10px] text-gray-400 font-medium">${item.qty} ${item.unit} • ${new Date(item.timestamp).toLocaleDateString('id-ID')}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <p class="text-sm font-black text-blue-600">${formatIDR(item.price)}</p>
+                        <button onclick="window.deleteItem('${item.id}', 'history')" class="text-gray-200 hover:text-red-500 transition-colors"><i data-lucide="trash" size="14"></i></button>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderTotals() {
+            const m = parseInt(filterMonth.value);
+            const y = parseInt(filterYear.value);
+            document.getElementById('labelMonth').innerText = `${monthNames[m]}`;
+
+            const total = historyData
+                .filter(i => {
+                    const d = new Date(i.timestamp);
+                    return d.getMonth() === m && d.getFullYear() === y;
+                })
+                .reduce((s, i) => s + i.price, 0);
+            document.getElementById('totalMonth').innerText = formatIDR(total);
+        }
+
+        window.deleteSession = async (id) => {
+            if (confirm("Hapus kartu belanja ini?")) {
+                await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'sessions', id));
+            }
+        };
+
+        window.deleteItem = async (id, coll) => {
+            if (confirm("Hapus data riwayat ini?")) {
+                await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, coll, id));
+            }
+        };
+
+        filterMonth.onchange = () => renderAllHistoryUI();
+        filterYear.onchange = () => renderAllHistoryUI();
+
+    </script>
+</body>
+
+</html>

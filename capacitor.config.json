@@ -1,0 +1,8 @@
+{
+    "appId": "com.catatbelanja.app",
+    "appName": "CatatBelanja",
+    "webDir": "dist",
+    "server": {
+        "androidScheme": "https"
+    }
+}
